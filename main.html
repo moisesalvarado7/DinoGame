@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DinoGame</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #f0f0f0;
+        }
+        #game {
+            width: 800px;
+            height: 200px;
+            margin: 50px auto;
+            position: relative;
+            background: white;
+            overflow: hidden;
+        }
+        #dino {
+            width: 30px;
+            height: 50px;
+            background: #555;
+            position: absolute;
+            bottom: 0;
+            left: 50px;
+        }
+        #ground {
+            width: 100%;
+            height: 20px;
+            background: #333;
+            position: absolute;
+            bottom: 0;
+        }
+        .cactus {
+            width: 20px;
+            height: 40px;
+            background: green;
+            position: absolute;
+            bottom: 0;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-family: Arial;
+            font-size: 20px;
+        }
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: Arial;
+            font-size: 30px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="game">
+        <div id="dino"></div>
+        <div id="ground"></div>
+        <div id="score">0</div>
+        <div id="game-over">GAME OVER</div>
+    </div>
+    <script>
+        // Variables del juego
+        const dino = document.getElementById('dino');
+        const game = document.getElementById('game');
+        const scoreDisplay = document.getElementById('score');
+        const gameOverDisplay = document.getElementById('game-over');
+        
+        let isJumping = false;
+        let isGameOver = false;
+        let score = 0;
+        let speed = 3;  
+        let gravity = 0.9;
+        let position = 0;
+        let obstacles = [];
+        let gameSpeed = 1.2; 
+        let frameCount = 0;
+        // Controles
+        document.addEventListener('keydown', function(e) {
+            if ((e.code === 'Space' || e.key === 'ArrowUp') && !isJumping && !isGameOver) {
+                isJumping = true;
+                jump();
+            }
+            if ((e.code === 'Space' || e.key === 'ArrowUp') && isGameOver) {
+                resetGame();
+            }
+        });
+        // Función de salto 
+        function jump() {
+            let count = 0;
+            let timerId = setInterval(function() {
+                // Caída
+                if (count === 20) {  
+                    clearInterval(timerId);
+                    let downTimerId = setInterval(function() {
+                        position -= 4; 
+                        count--;
+                        position = position * gravity;
+                        dino.style.bottom = position + 'px';
+                        if (position <= 0) {
+                            clearInterval(downTimerId);
+                            isJumping = false;
+                            position = 0;
+                            dino.style.bottom = '0px';
+                        }
+                    }, 25);
+                }
+                // Subida
+                position += 8; 
+                count++;
+                position = position * gravity;
+                dino.style.bottom = position + 'px';
+            }, 25);
+        }
+        // Generar cactus 
+        function createObstacle() {
+            if (isGameOver) return;
+            
+            let obstacle = document.createElement('div');
+            obstacle.classList.add('cactus');
+            obstacle.style.left = '800px';
+            game.appendChild(obstacle);
+            
+            obstacles.push(obstacle);
+            
+            // Tiempo entre obstáculos aumentado (de 2-3 segundos)
+            let randomTime = Math.random() * 2000 + 2000;
+            setTimeout(createObstacle, randomTime / gameSpeed);
+        }
+        // Bucle principal del juego
+        function gameLoop() {
+            frameCount++;
+            if (frameCount % 15 === 0) {  
+                score++;
+                scoreDisplay.textContent = score;
+                
+                // Aumentar dificultad más gradualmente
+                if (score % 150 === 0) {  
+                    gameSpeed += 0.1; 
+                }
+            }      
+            // Mover obstáculos
+            obstacles.forEach(function(obstacle) {
+                let obstacleLeft = parseInt(window.getComputedStyle(obstacle).getPropertyValue('left'));
+                
+                // Detectar colisión (margen más amplio)
+                if (
+                    obstacleLeft < 70 && 
+                    obstacleLeft > 20 && 
+                    position < 40
+                ) {
+                    gameOver();
+                }
+                
+                // Mover obstáculo
+                obstacle.style.left = (obstacleLeft - speed * gameSpeed) + 'px';
+                
+                // Eliminar obstáculos que salen de pantalla
+                if (obstacleLeft < -20) {
+                    obstacle.remove();
+                    obstacles.shift();
+                }
+            });
+            
+            if (!isGameOver) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+        // Game over
+        function gameOver() {
+            isGameOver = true;
+            gameOverDisplay.style.display = 'block';
+            obstacles.forEach(function(obstacle) {
+                obstacle.remove();
+            });
+            obstacles = [];
+        }
+        // Reiniciar juego
+        function resetGame() {
+            isGameOver = false;
+            score = 0;
+            gameSpeed = 1.5;  
+            position = 0;
+            obstacles = [];
+            gameOverDisplay.style.display = 'none';
+            scoreDisplay.textContent = '0';
+            gameLoop();
+            setTimeout(createObstacle, 2000);  
+        }
+        // Iniciar juego 
+        setTimeout(createObstacle, 2000); 
+        gameLoop();
+    </script>
+</body>
+</html>
